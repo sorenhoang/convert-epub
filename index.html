@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Enforces that the PDF never leaves the device: no connections to other origins. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self' blob:; connect-src 'self' blob: ws:; frame-src 'self' blob:; style-src 'self' 'unsafe-inline' blob:; img-src 'self' data: blob:; font-src 'self' data: blob:" />
+    <title>PDF → EPUB for Kindle</title>
+  </head>
+  <body>
+    <h1>PDF → EPUB for Kindle</h1>
+    <p class="lede">Converts text-based PDFs into reflowable EPUB. Your file never leaves this device.</p>
+    <label id="drop">
+      Drop a PDF here, or choose one
+      <input id="file" type="file" accept="application/pdf,.pdf" />
+    </label>
+    <p id="status" role="status" aria-live="polite"></p>
+    <p id="warning"></p>
+    <p class="actions">
+      <a id="download" hidden>Download</a>
+      <a id="preview" target="_blank" rel="opener" hidden>Preview</a>
+    </p>
+    <p class="lede"><a href="/reader.html">Open an EPUB in the reader</a></p>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

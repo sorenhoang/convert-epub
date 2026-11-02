@@ -1,0 +1,226 @@
+{
+  "goals": [
+    {
+      "id": "goal-1",
+      "goal": "A user opens the static site, drops a text-based single-column PDF, and downloads an EPUB that passes epubcheck 5.3 with 0 errors (Kindle acceptance itself is unverified; epubcheck is the proxy)"
+    },
+    {
+      "id": "goal-2",
+      "goal": "The EPUB reads as reflowable prose: running headers/footers and page numbers removed, hyphenated line breaks rejoined, paragraphs not split at page breaks, and the book split into chapters"
+    },
+    {
+      "id": "goal-3",
+      "goal": "The PDF stays on the device: during conversion the app makes no cross-origin requests and sends no request bodies"
+    },
+    {
+      "id": "goal-4",
+      "goal": "Encrypted, scanned (no text layer), undecodable and non-PDF inputs produce a specific error message instead of an EPUB"
+    }
+  ],
+  "items": [
+    {
+      "id": "F-1",
+      "title": "EPUB 3 writer from a book model",
+      "goals": [
+        "goal-1"
+      ],
+      "acceptance": [
+        "writeEpub({title, author, chapters[3]}) → zip whose first entry is 'mimetype', stored uncompressed, content 'application/epub+zip'",
+        "that EPUB → epubcheck 5.3 (epubcheck-static) reports 0 errors, 0 fatals",
+        "paragraph text containing & < > \" → escaped in XHTML; epubcheck still 0 errors",
+        "title 'Truyện Kiều' → appears unchanged in content.opf dc:title and nav.xhtml",
+        "nav.xhtml lists one entry per chapter, in order, with the chapter titles",
+        "book with 0 chapters → error 'book has no content', no zip produced"
+      ],
+      "behaviour": "unit",
+      "testFiles": [
+        "test/epub.test.ts",
+        "test/review-fixes.test.ts"
+      ],
+      "proves": {
+        "goal-1": [
+          "test/epub.test.ts: passes epubcheck with 0 errors",
+          "test/review-fixes.test.ts: strips characters illegal in XML 1.0"
+        ]
+      },
+      "passes": true,
+      "attempts": 1,
+      "status": "done"
+    },
+    {
+      "id": "F-2",
+      "title": "Layout: pdf.js text items → lines → paragraphs",
+      "goals": [
+        "goal-2"
+      ],
+      "acceptance": [
+        "items with str '' or height 0 → ignored (probed: pdf.js 6.5 emits these before every drawText)",
+        "items whose baselines differ by ≤ 0.5 × font size → joined into one line, ordered by x",
+        "consecutive lines 14pt apart at 11pt size → same paragraph; a gap ≥ 1.5 × the page's median line spacing → new paragraph (heuristic constant, named in code)",
+        "line indented ≥ 1 × font size relative to the block's left edge → starts a new paragraph",
+        "page with two x-clusters of lines (two columns) → all left-column lines come before right-column lines"
+      ],
+      "behaviour": "unit",
+      "testFiles": [
+        "test/layout.test.ts",
+        "test/review-fixes.test.ts"
+      ],
+      "proves": {
+        "goal-2": [
+          "test/layout.test.ts",
+          "test/review-fixes.test.ts: layout robustness"
+        ]
+      },
+      "passes": true,
+      "attempts": 2,
+      "status": "done"
+    },
+    {
+      "id": "F-3",
+      "title": "Cleanup: headers/footers, page numbers, hyphenation, page-break merge, Unicode",
+      "goals": [
+        "goal-2"
+      ],
+      "acceptance": [
+        "line with the same text at the same y (±2pt) on > 50% of pages (threshold from design.md) → removed from every page",
+        "line in the top or bottom 10% of the page whose text is only a number or roman numeral → removed",
+        "'exam-' at line end + 'ple' → 'example'; 'Jean-' + 'Paul' (next starts uppercase) → 'Jean-Paul'",
+        "last paragraph of a page not ending in . ! ? … \" ” ) and next page starting lowercase → merged into one paragraph",
+        "decomposed 'Vie\\u0302\\u0323t' → NFC 'Việt'; ligatures 'ﬁ' 'ﬂ' → 'fi' 'fl'"
+      ],
+      "behaviour": "unit",
+      "testFiles": [
+        "test/cleanup.test.ts",
+        "test/review-fixes.test.ts"
+      ],
+      "proves": {
+        "goal-2": [
+          "test/cleanup.test.ts",
+          "test/review-fixes.test.ts: cleanup robustness"
+        ]
+      },
+      "passes": true,
+      "attempts": 1,
+      "status": "done"
+    },
+    {
+      "id": "F-4",
+      "title": "Structure: headings, chapters, metadata",
+      "goals": [
+        "goal-2"
+      ],
+      "acceptance": [
+        "body size = most common line height weighted by character count; a paragraph of ≤ 15 words with height ≥ 1.3 × body size → heading (probed: pdf.js item height = font size; fontName is the same id across sizes, so size is used, not font name)",
+        "PDF with a top-level outline of 3 entries → 3 chapters split at those entries' pages, titled by the outline",
+        "PDF without outline (probed: pdf-lib output returns null) → chapters split at headings of the largest heading size",
+        "no outline and no headings → 1 chapter titled with the book title",
+        "metadata Title present → used as title; absent → filename without '.pdf'; Author absent → 'Unknown'"
+      ],
+      "behaviour": "unit",
+      "testFiles": [
+        "test/structure.test.ts",
+        "test/review-fixes.test.ts"
+      ],
+      "proves": {
+        "goal-2": [
+          "test/structure.test.ts",
+          "test/review-fixes.test.ts: F-4 through a real PDF"
+        ]
+      },
+      "passes": true,
+      "attempts": 1,
+      "status": "done"
+    },
+    {
+      "id": "F-5",
+      "title": "Unconvertible input detection",
+      "goals": [
+        "goal-4"
+      ],
+      "acceptance": [
+        "password-protected PDF → error 'This PDF is password-protected' (probed: pdf.js throws PasswordException code 1 on a pypdf-encrypted fixture)",
+        "PDF where every page has 0 non-empty text items → error 'This looks like a scanned PDF with no text layer'",
+        "extracted text with > 10% of characters in U+FFFD, private-use or control ranges → error 'Text in this PDF could not be decoded' (unverified: 10% threshold is a guess, no measurement behind it)",
+        "bytes that are not a PDF → error 'Not a valid PDF file'"
+      ],
+      "behaviour": "unit",
+      "testFiles": [
+        "test/errors.test.ts",
+        "test/review-fixes.test.ts"
+      ],
+      "proves": {
+        "goal-4": [
+          "test/errors.test.ts",
+          "test/review-fixes.test.ts: goal-4 end to end through convert()"
+        ]
+      },
+      "passes": true,
+      "attempts": 1,
+      "status": "done"
+    },
+    {
+      "id": "F-6",
+      "title": "End-to-end convert() pipeline",
+      "goals": [
+        "goal-1",
+        "goal-2"
+      ],
+      "acceptance": [
+        "convert(bytes of a generated 30-page fixture: running header, page numbers, 3 chapter headings, a hyphenated line break, a paragraph crossing a page break) → EPUB with 0 epubcheck errors",
+        "that EPUB → nav has 3 chapters; no XHTML contains the running header text or a bare page number paragraph; 'example' is present and 'exam-' is not; the cross-page paragraph is one <p>",
+        "onProgress is called once per page with (page, total); the last call is (30, 30)",
+        "encrypted fixture → convert rejects with the F-5 password error"
+      ],
+      "behaviour": "unit",
+      "testFiles": [
+        "test/convert.test.ts"
+      ],
+      "proves": {
+        "goal-1": [
+          "test/convert.test.ts: produces an EPUB with 0 epubcheck errors"
+        ],
+        "goal-2": [
+          "test/convert.test.ts: headers, page numbers, hyphenation, cross-page, 3 chapters"
+        ]
+      },
+      "passes": true,
+      "attempts": 1,
+      "status": "done"
+    },
+    {
+      "id": "F-7",
+      "title": "Static web UI: drop, progress, download, errors",
+      "goals": [
+        "goal-1",
+        "goal-3",
+        "goal-4"
+      ],
+      "acceptance": [
+        "on the built site (vite preview), choosing the 30-page fixture → progress text updates and a download link '<title>.epub' appears; the downloaded file passes epubcheck with 0 errors",
+        "during that conversion → Playwright records 0 requests to another origin and 0 requests with a body (POST/PUT/PATCH)",
+        "choosing the encrypted fixture → the password error message is shown and no download link appears",
+        "conversion runs in a Web Worker: the progress text changes at least twice before the download link appears",
+        "output larger than 50 MB → warning 'Over Send-to-Kindle email limit (50 MB); use the web or app upload' (unverified: Amazon's limit taken from their docs, not probed)"
+      ],
+      "behaviour": "browser",
+      "testFiles": [
+        "e2e/convert.spec.ts",
+        "test/limits.test.ts"
+      ],
+      "proves": {
+        "goal-1": [
+          "e2e/convert.spec.ts: download passes epubcheck"
+        ],
+        "goal-3": [
+          "e2e/convert.spec.ts: 0 off-origin requests, 0 request bodies"
+        ],
+        "goal-4": [
+          "e2e/convert.spec.ts: password error shown, no download"
+        ]
+      },
+      "passes": true,
+      "attempts": 2,
+      "status": "done"
+    }
+  ]
+}

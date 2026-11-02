@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- script-src 'self' (no blob:, no inline) also blocks scripts embedded in books. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self' blob:; connect-src 'self' blob: ws:; frame-src 'self' blob:; style-src 'self' 'unsafe-inline' blob:; img-src 'self' data: blob:; font-src 'self' data: blob:" />
+    <title>Reader</title>
+  </head>
+  <body class="reader">
+    <header>
+      <a href="/">← Convert</a>
+      <h1 id="title">Reader</h1>
+      <label class="open">Open EPUB <input id="open" type="file" accept="application/epub+zip,.epub" /></label>
+    </header>
+    <nav aria-label="Book navigation">
+      <button id="prev" type="button" aria-label="Previous page">‹</button>
+      <select id="toc" aria-label="Table of contents"></select>
+      <span id="location" aria-live="polite"></span>
+      <button id="next" type="button" aria-label="Next page">›</button>
+    </nav>
+    <p id="status" role="status" aria-live="polite"></p>
+    <main id="book"></main>
+    <script type="module" src="/src/reader.ts"></script>
+  </body>
+</html>
